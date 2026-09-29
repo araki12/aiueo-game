@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#0b0e1f" />
+<title>あいうえおゲーム</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230b0e1f'/%3E%3Ctext x='32' y='45' font-size='34' text-anchor='middle' fill='%235ce1ff' font-family='sans-serif'%3Eあ%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kaisei+Decol&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/game.css">
+</head>
+<body>
+  <div class="bg-glow" aria-hidden="true"><span class="orb orb-a"></span><span class="orb orb-b"></span><span class="orb orb-c"></span></div>
+
+  <header class="app-header">
+    <p class="brand">あ<em>いうえお</em>ゲーム</p>
+    <div class="header-actions">
+      <button id="help-toggle" class="icon-button" type="button" aria-expanded="false" aria-controls="help-panel">？</button>
+      <button id="title-reset" class="ghost-button" type="button" hidden>タイトルへ</button>
+    </div>
+  </header>
+
+  <div id="help-panel" class="help-panel" hidden>
+    <h2>あそびかた</h2>
+    <ol>
+      <li>お題に合う言葉を、他の人に見られないように登録します。</li>
+      <li>最初の手番はランダム、その後はプレイヤーID順に生存者だけを回ります。</li>
+      <li>手番のプレイヤーは、まだ開いていない音を1つ選びます。</li>
+      <li>選ばれた音が言葉に含まれていたら、全プレイヤーの言葉で同時にその文字が表になります。</li>
+      <li>言葉がすべて表になった人は脱落します。</li>
+      <li>最後の1人になるか、生存者全員の残り文字が同じ音だけになったら終了です。</li>
+      <li>同時に全員脱落した場合は、その全員が同率優勝になります。</li>
+    </ol>
+    <button type="button" class="ghost-button" id="help-close">閉じる</button>
+  </div>
+
+  <main id="app">
+    <section id="screen-setup" class="screen">
+      <h1 id="setup-heading">あそぶ準備</h1>
+
+      <div class="setup-block">
+        <h2>プレイヤー人数</h2>
+        <div class="stepper">
+          <button type="button" id="player-count-minus" class="stepper-button" aria-label="人数を減らす">−</button>
+          <span id="player-count-value" class="stepper-value">2</span>
+          <button type="button" id="player-count-plus" class="stepper-button" aria-label="人数を増やす">＋</button>
+        </div>
+      </div>
+
+      <div class="setup-block">
+        <div class="setup-block-header">
+          <h2>お題</h2>
+          <button type="button" id="theme-reroll" class="ghost-button small">🎲 ランダム</button>
+        </div>
+        <div id="theme-chip-list" class="chip-list"></div>
+        <label class="field-label" for="theme-custom-input">じぶんで決める場合</label>
+        <input type="text" id="theme-custom-input" class="text-input" placeholder="例：好きな食べ物" maxlength="20" />
+      </div>
+
+      <button type="button" id="setup-start" class="primary-button large">ことばを入力する ▸</button>
+    </section>
+
+    <section id="screen-handoff" class="screen" hidden>
+      <div id="handoff-blind" class="handoff-card">
+        <p class="handoff-eyebrow">画面を伏せて渡してください</p>
+        <p id="handoff-blind-text" class="handoff-name">つぎは プレイヤー1 の番です</p>
+        <button type="button" id="handoff-reveal-button" class="primary-button large">入力する</button>
+      </div>
+
+      <form id="handoff-form" class="handoff-card" hidden novalidate>
+        <p class="handoff-eyebrow" id="handoff-player-label">プレイヤー1</p>
+        <div class="handoff-theme">
+          <span class="handoff-theme-caption">今回のお題</span>
+          <strong id="handoff-theme-value"></strong>
+        </div>
+
+        <label class="field-label" for="handoff-name-input">名前</label>
+        <input type="text" id="handoff-name-input" class="text-input" maxlength="10" />
+
+        <label class="field-label" for="handoff-word-input">お題にあう言葉（ひらがな・カタカナ入力可、7文字まで）</label>
+        <input type="text" id="handoff-word-input" class="text-input" autocomplete="off" />
+        <div class="handoff-meta">
+          <span id="handoff-word-counter">0 / 7</span>
+          <span id="handoff-word-preview"></span>
+        </div>
+
+        <button type="submit" class="primary-button large">けってい</button>
+      </form>
+    </section>
+
+    <section id="screen-game" class="screen" hidden>
+      <div class="game-topline">
+        <p class="theme-pill">お題：<span id="game-theme-label"></span></p>
+        <p class="round-pill" id="game-round-label">手番 0</p>
+      </div>
+
+      <p id="turn-banner-text" class="turn-banner" aria-live="polite"></p>
+
+      <div id="player-board" class="player-board"></div>
+
+      <div class="kana-panel">
+        <div id="kana-board" class="kana-board"></div>
+        <div class="kana-confirm-row">
+          <span id="kana-selected-label" class="kana-selected-label">音をえらんでください</span>
+          <button type="button" id="kana-confirm-button" class="primary-button" disabled>この音でひらく</button>
+        </div>
+      </div>
+
+      <div class="log-panel">
+        <h2>けいか</h2>
+        <ol id="turn-log" class="turn-log" aria-live="polite"></ol>
+      </div>
+    </section>
+
+    <section id="screen-result" class="screen" hidden>
+      <p id="result-title" class="result-title"></p>
+      <div id="result-final-board" class="player-board"></div>
+      <div class="log-panel">
+        <h2>けいか</h2>
+        <ol id="result-log" class="turn-log"></ol>
+      </div>
+      <button type="button" id="result-again-button" class="primary-button large">もういちど あそぶ</button>
+    </section>
+  </main>
+
+  <dialog id="app-dialog" class="app-dialog">
+    <form method="dialog" id="dialog-form">
+      <p id="dialog-message"></p>
+      <div id="dialog-actions" class="dialog-actions"></div>
+    </form>
+  </dialog>
+
+  <script src="scripts/game.js"></script>
+</body>
+</html>
